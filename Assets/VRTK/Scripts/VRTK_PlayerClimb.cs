@@ -1,38 +1,60 @@
-﻿namespace VRTK
+﻿// Player Climb|Scripts|0210
+namespace VRTK
 {
     using UnityEngine;
-    using System.Collections;
 
+    /// <summary>
+    /// Event Payload
+    /// </summary>
+    /// <param name="controllerIndex">The index of the controller doing the interaction.</param>
+    /// <param name="target">The GameObject of the interactable object that is being interacted with by the controller.</param>
     public struct PlayerClimbEventArgs
     {
         public uint controllerIndex;
         public GameObject target;
     }
 
+    /// <summary>
+    /// Event Payload
+    /// </summary>
+    /// <param name="sender">this object</param>
+    /// <param name="e"><see cref="PlayerClimbEventArgs"/></param>
     public delegate void PlayerClimbEventHandler(object sender, PlayerClimbEventArgs e);
 
+    /// <summary>
+    /// This class allows player movement based on grabbing of `VRTK_InteractableObject` objects that are tagged as `Climbable`. It should be attached to the `[CameraRig]` object. Because it works by grabbing, each controller should have a `VRTK_InteractGrab` and `VRTK_InteractTouch` component attached.
+    /// </summary>
+    /// <example>
+    /// `VRTK/Examples/037_CameraRig_ClimbingFalling` shows how to set up a scene with player climbing. There are many different examples showing how the same system can be used in unique ways.
+    /// </example>
     public class VRTK_PlayerClimb : MonoBehaviour
     {
-        public event PlayerClimbEventHandler PlayerClimbStarted;
-        public event PlayerClimbEventHandler PlayerClimbEnded;
-
+        [Tooltip("Will scale movement up and down based on the player transform's scale.")]
         public bool usePlayerScale = true;
+        [Tooltip("Will allow physics based falling when the user lets go of objects above ground.")]
         public bool useGravity = true;
+        [Tooltip("An additional amount to move the player away from a wall if an ungrab teleport happens due to camera/object collisions.")]
         public float safeZoneTeleportOffset = 0.4f;
+
+        /// <summary>
+        /// Emitted when player climbing has started.
+        /// </summary>
+        public event PlayerClimbEventHandler PlayerClimbStarted;
+        /// <summary>
+        /// Emitted when player climbing has ended.
+        /// </summary>
+        public event PlayerClimbEventHandler PlayerClimbEnded;
 
         private Transform headCamera;
         private Transform controllerTransform;
         private Vector3 startControllerPosition;
         private Vector3 startPosition;
-
         private Vector3 lastGoodHeadsetPosition;
         private bool headsetColliding = false;
         private bool isClimbing = false;
-
         private VRTK_PlayerPresence playerPresence;
         private VRTK_HeadsetCollision headsetCollision;
         private VRTK_HeadsetFade headsetFade;
-
         private GameObject climbingObject;
 
         private void OnPlayerClimbStarted(PlayerClimbEventArgs e)
@@ -61,7 +83,6 @@
 
         private void Awake()
         {
-            // Required Component: VRTK_PlayerPresence
             playerPresence = GetComponent<VRTK_PlayerPresence>();
             if (useGravity)
             {
@@ -100,8 +121,8 @@
 
         private void InitListeners(bool state)
         {
-            InitControllerListeners(VRTK_SDK_Bridge.GetControllerLeftHand(), state);
-            InitControllerListeners(VRTK_SDK_Bridge.GetControllerRightHand(), state);
+            InitControllerListeners(VRTK_DeviceFinder.GetControllerLeftHand(), state);
+            InitControllerListeners(VRTK_DeviceFinder.GetControllerRightHand(), state);
 
             InitTeleportListener(state);
             InitCollisionFadeListener(state);
@@ -193,6 +214,31 @@
             headsetColliding = false;
         }
 
+        // Should the object physics fall down, or teleport up
+        private bool ShouldEnablePhysics()
+        {
+            bool enablePhysics = true;
+
+            Transform headset = VRTK_DeviceFinder.HeadsetCamera();
+
+            if (headset != null)
+            {
+                Ray ray = new Ray(headset.position, -transform.up);
+                RaycastHit rayCollidedWith;
+                bool rayHit = Physics.Raycast(ray, out rayCollidedWith);
+
+                // if the in game floor is already at or above our playspace floor, 
+                // just let VRTK_HeightAdjustTeleport teleport us up
+                if (rayHit && rayCollidedWith.point.y > transform.position.y)
+                {
+                    enablePhysics = false;
+                }
+
+            }
+
+            return enablePhysics;
+        }
+
         private void Ungrab(bool carryMomentum, uint controllerIndex, GameObject target)
         {
             OnPlayerClimbEnded(SetPlayerClimbEvent(controllerIndex, target));
@@ -203,7 +249,7 @@
             {
                 Vector3 headsetPosition = headCamera.transform.position;
 
-                Vector3 moveVector = lastGoodHeadsetPosition-headsetPosition;
+                Vector3 moveVector = lastGoodHeadsetPosition - headsetPosition;
                 Vector3 moveDirection = moveVector.normalized;
                 Vector3 moveOffset = moveDirection * safeZoneTeleportOffset;
 
@@ -224,7 +270,11 @@
                     }
                 }
 
-                playerPresence.StartPhysicsFall(velocity);
+                // check if we should teleport up or physics fall down
+                if (ShouldEnablePhysics())
+                {
+                    playerPresence.StartPhysicsFall(velocity);
+                }
             }
             climbingObject = null;
         }

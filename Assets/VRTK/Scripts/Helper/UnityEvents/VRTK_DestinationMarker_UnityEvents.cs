@@ -1,64 +1,76 @@
-﻿using UnityEngine;
-using UnityEngine.Events;
-using VRTK;
-
-[RequireComponent(typeof(VRTK_DestinationMarker))]
-public class VRTK_DestinationMarker_UnityEvents : MonoBehaviour
+﻿namespace VRTK.UnityEventHelper
 {
-    private VRTK_DestinationMarker dm;
+    using UnityEngine;
+    using UnityEngine.Events;
 
-    [System.Serializable]
-    public class UnityObjectEvent : UnityEvent<DestinationMarkerEventArgs> { };
-    public UnityObjectEvent OnDestinationMarkerEnter;
-    public UnityObjectEvent OnDestinationMarkerExit;
-    public UnityObjectEvent OnDestinationMarkerSet;
-
-    private void SetDestinationMarker()
+    [RequireComponent(typeof(VRTK_DestinationMarker))]
+    public class VRTK_DestinationMarker_UnityEvents : MonoBehaviour
     {
-        if (dm == null)
+        private VRTK_DestinationMarker dm;
+
+        [System.Serializable]
+        public class UnityObjectEvent : UnityEvent<object, DestinationMarkerEventArgs> { };
+
+        /// <summary>
+        /// Emits the DestinationMarkerEnter class event.
+        /// </summary>
+        public UnityObjectEvent OnDestinationMarkerEnter;
+        /// <summary>
+        /// Emits the DestinationMarkerExit class event.
+        /// </summary>
+        public UnityObjectEvent OnDestinationMarkerExit;
+        /// <summary>
+        /// Emits the DestinationMarkerSet class event.
+        /// </summary>
+        public UnityObjectEvent OnDestinationMarkerSet;
+
+        private void SetDestinationMarker()
         {
-            dm = GetComponent<VRTK_DestinationMarker>();
-        }
-    }
-
-    private void OnEnable()
-    {
-        SetDestinationMarker();
-        if (dm == null)
-        {
-            Debug.LogError("The VRTK_DestinationMarker_UnityEvents script requires to be attached to a GameObject that contains a VRTK_DestinationMarker script");
-            return;
-        }
-
-        dm.DestinationMarkerEnter += DestinationMarkerEnter;
-        dm.DestinationMarkerExit += DestinationMarkerExit;
-        dm.DestinationMarkerSet += DestinationMarkerSet;
-    }
-
-    private void DestinationMarkerEnter(object o, DestinationMarkerEventArgs e)
-    {
-        OnDestinationMarkerEnter.Invoke(e);
-    }
-
-    private void DestinationMarkerExit(object o, DestinationMarkerEventArgs e)
-    {
-        OnDestinationMarkerExit.Invoke(e);
-    }
-
-    private void DestinationMarkerSet(object o, DestinationMarkerEventArgs e)
-    {
-        OnDestinationMarkerSet.Invoke(e);
-    }
-
-    private void OnDisable()
-    {
-        if (dm == null)
-        {
-            return;
+            if (dm == null)
+            {
+                dm = GetComponent<VRTK_DestinationMarker>();
+            }
         }
 
-        dm.DestinationMarkerEnter -= DestinationMarkerEnter;
-        dm.DestinationMarkerExit -= DestinationMarkerExit;
-        dm.DestinationMarkerSet -= DestinationMarkerSet;
+        private void OnEnable()
+        {
+            SetDestinationMarker();
+            if (dm == null)
+            {
+                Debug.LogError("The VRTK_DestinationMarker_UnityEvents script requires to be attached to a GameObject that contains a VRTK_DestinationMarker script");
+                return;
+            }
+
+            dm.DestinationMarkerEnter += DestinationMarkerEnter;
+            dm.DestinationMarkerExit += DestinationMarkerExit;
+            dm.DestinationMarkerSet += DestinationMarkerSet;
+        }
+
+        private void DestinationMarkerEnter(object o, DestinationMarkerEventArgs e)
+        {
+            OnDestinationMarkerEnter.Invoke(o, e);
+        }
+
+        private void DestinationMarkerExit(object o, DestinationMarkerEventArgs e)
+        {
+            OnDestinationMarkerExit.Invoke(o, e);
+        }
+
+        private void DestinationMarkerSet(object o, DestinationMarkerEventArgs e)
+        {
+            OnDestinationMarkerSet.Invoke(o, e);
+        }
+
+        private void OnDisable()
+        {
+            if (dm == null)
+            {
+                return;
+            }
+
+            dm.DestinationMarkerEnter -= DestinationMarkerEnter;
+            dm.DestinationMarkerExit -= DestinationMarkerExit;
+            dm.DestinationMarkerSet -= DestinationMarkerSet;
+        }
     }
 }
